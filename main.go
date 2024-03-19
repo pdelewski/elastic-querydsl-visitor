@@ -32,6 +32,7 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
+
 	//TraverseQuery(query, &PrintVisitor{})
 	rewriter := NewSExpressionRewriter()
 	TraverseQuery(query, rewriter)

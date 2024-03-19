@@ -43,10 +43,10 @@ func (p *PrintVisitor) PostVisitTypeQuery(t *types.TypeQuery) {
 	fmt.Println("Post type type query")
 }
 
-func (p *PrintVisitor) PreVisitCommonTermsQuery(ctq *types.CommonTermsQuery) {
+func (p *PrintVisitor) PreVisitCommonTermsQuery(ctq *types.CommonTermsQuery, field string) {
 	fmt.Println("Pre common terms query")
 }
-func (p *PrintVisitor) PostVisitCommonTermsQuery(ctq *types.CommonTermsQuery) {
+func (p *PrintVisitor) PostVisitCommonTermsQuery(ctq *types.CommonTermsQuery, field string) {
 	fmt.Println("Post common terms query")
 }
 
