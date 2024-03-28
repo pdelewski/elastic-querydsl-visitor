@@ -18,6 +18,24 @@ const (
 	White  = "\033[37m"
 )
 
+const queryContent = `{
+  "query": {
+    "bool": {
+      "must": [
+        { "term": { "field1": "value1" }},
+        {
+          "bool": {
+            "should": [
+              { "term": { "field2": "value2" }},
+              { "term": { "field2": "value3" }}
+            ]
+          }
+        }
+      ]
+    }
+  }
+}`
+
 func printColoredTextWithBackground(text, textColor, backgroundColor string) {
 	// ANSI escape code for clearing the line and setting background color
 	fmt.Printf("\033[K%s%s%s%s%s\n", backgroundColor, textColor, text, Reset, Reset)
@@ -93,7 +111,7 @@ func isSubSlice(slice1, slice2 []string) bool {
 }
 
 func matcher(path []string) bool {
-	if isSubSlice(path, []string{"children", "*", "age"}) {
+	if isSubSlice(path, []string{"query", "bool", "must", "*", "term"}) {
 		return true
 	}
 	return false
@@ -107,18 +125,7 @@ func printJSON(data map[string]interface{}, indent string) {
 }
 
 func printJsonMain() {
-	jsonData := `{
-        "name": "John",
-        "age": 30,
-        "address": {
-            "city": "New York",
-            "zipcode": "10001"
-        },
-        "children": [
-            {"name": "Alice", "age": 5},
-            {"name": "Bob", "age": 8}
-        ]
-    }`
+	jsonData := queryContent
 
 	var data map[string]interface{}
 	err := json.Unmarshal([]byte(jsonData), &data)
@@ -133,23 +140,7 @@ func printJsonMain() {
 }
 
 func traverse() {
-	body := []byte(`{
-  "query": {
-    "bool": {
-      "must": [
-        { "term": { "field1": "value1" }},
-        {
-          "bool": {
-            "should": [
-              { "term": { "field2": "value2" }},
-              { "term": { "field2": "value3" }}
-            ]
-          }
-        }
-      ]
-    }
-  }
-}`)
+	body := []byte(queryContent)
 	query := &types.Query{}
 	_ = query
 	err := json.Unmarshal(body, query)
