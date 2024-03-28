@@ -4,27 +4,55 @@ import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 )
 
-func TraverseBooleanQuery(b *types.BoolQuery, v QueryVisitor) {
+type QueryTraverser struct {
+	Debug bool
+}
+
+func (qt *QueryTraverser) TraverseBooleanQuery(b *types.BoolQuery, v QueryVisitor, path []string) {
 	if b == nil {
 		return
 	}
 	v.PreVisitBool(b)
 	for _, q := range b.Filter {
-		TraverseQuery(&q, v)
+		if qt.Debug {
+			path = append(path, getJsonTagName(&q, q.Bool))
+		}
+		qt.TraverseQuery(&q, v, path)
+		if qt.Debug {
+			path = path[:len(path)-1]
+		}
 	}
 	for _, q := range b.Should {
-		TraverseQuery(&q, v)
+		if qt.Debug {
+			path = append(path, getJsonTagName(&q, q.Bool))
+		}
+		qt.TraverseQuery(&q, v, path)
+		if qt.Debug {
+			path = path[:len(path)-1]
+		}
 	}
 	for _, q := range b.Must {
-		TraverseQuery(&q, v)
+		if qt.Debug {
+			path = append(path, getJsonTagName(&q, q.Bool))
+		}
+		qt.TraverseQuery(&q, v, path)
+		if qt.Debug {
+			path = path[:len(path)-1]
+		}
 	}
 	for _, q := range b.MustNot {
-		TraverseQuery(&q, v)
+		if qt.Debug {
+			path = append(path, getJsonTagName(&q, q.Bool))
+		}
+		qt.TraverseQuery(&q, v, path)
+		if qt.Debug {
+			path = path[:len(path)-1]
+		}
 	}
 	v.PostVisitBool(b)
 }
 
-func TraverseCombinedFieldsQuery(cfq *types.CombinedFieldsQuery, v QueryVisitor) {
+func (qt *QueryTraverser) TraverseCombinedFieldsQuery(cfq *types.CombinedFieldsQuery, v QueryVisitor, path []string) {
 	if cfq == nil {
 		return
 	}
@@ -32,7 +60,7 @@ func TraverseCombinedFieldsQuery(cfq *types.CombinedFieldsQuery, v QueryVisitor)
 	v.PostVisitCombinedFieldsQuery(cfq)
 }
 
-func TraverseTypeQuery(t *types.TypeQuery, v QueryVisitor) {
+func (qt *QueryTraverser) TraverseTypeQuery(t *types.TypeQuery, v QueryVisitor, path []string) {
 	if t == nil {
 		return
 	}
@@ -40,17 +68,17 @@ func TraverseTypeQuery(t *types.TypeQuery, v QueryVisitor) {
 	v.PostVisitTypeQuery(t)
 }
 
-func TraverseBoostingQuery(b *types.BoostingQuery, v QueryVisitor) {
+func (qt *QueryTraverser) TraverseBoostingQuery(b *types.BoostingQuery, v QueryVisitor, path []string) {
 	if b == nil {
 		return
 	}
 	v.PreVisitBoostingQuery(b)
-	TraverseQuery(b.Positive, v)
-	TraverseQuery(b.Negative, v)
+	qt.TraverseQuery(b.Positive, v, path)
+	qt.TraverseQuery(b.Negative, v, path)
 	v.PostVisitBoostingQuery(b)
 }
 
-func TraverseCommonTermsQuery(ctq *types.CommonTermsQuery, field string, v QueryVisitor) {
+func (qt *QueryTraverser) TraverseCommonTermsQuery(ctq *types.CommonTermsQuery, field string, v QueryVisitor, path []string) {
 	if ctq == nil {
 		return
 	}
@@ -58,7 +86,7 @@ func TraverseCommonTermsQuery(ctq *types.CommonTermsQuery, field string, v Query
 	v.PostVisitCommonTermsQuery(ctq, field)
 }
 
-func TraverseTermQuery(t *types.TermQuery, field string, v QueryVisitor) {
+func (qt *QueryTraverser) TraverseTermQuery(t *types.TermQuery, field string, v QueryVisitor, path []string) {
 	if t == nil {
 		return
 	}
@@ -66,16 +94,16 @@ func TraverseTermQuery(t *types.TermQuery, field string, v QueryVisitor) {
 	v.PostVisitTerm(t, field)
 }
 
-func TraverseConstantScoreQuery(csq *types.ConstantScoreQuery, v QueryVisitor) {
+func (qt *QueryTraverser) TraverseConstantScoreQuery(csq *types.ConstantScoreQuery, v QueryVisitor, path []string) {
 	if csq == nil {
 		return
 	}
 	v.PreVisitConstantScoreQuery(csq)
-	TraverseQuery(csq.Filter, v)
+	qt.TraverseQuery(csq.Filter, v, path)
 	v.PostVisitConstantScoreQuery(csq)
 }
 
-func TraverseDistanceFeatureQuery(dfq types.DistanceFeatureQuery, v QueryVisitor) {
+func (qt *QueryTraverser) TraverseDistanceFeatureQuery(dfq types.DistanceFeatureQuery, v QueryVisitor, path []string) {
 	if dfq == nil {
 		return
 	}
@@ -84,18 +112,18 @@ func TraverseDistanceFeatureQuery(dfq types.DistanceFeatureQuery, v QueryVisitor
 
 }
 
-func TraverseDismaxQuery(dq *types.DisMaxQuery, v QueryVisitor) {
+func (qt *QueryTraverser) TraverseDismaxQuery(dq *types.DisMaxQuery, v QueryVisitor, path []string) {
 	if dq == nil {
 		return
 	}
 	v.PreVisitDisMaxQuery(dq)
 	for _, q := range dq.Queries {
-		TraverseQuery(&q, v)
+		qt.TraverseQuery(&q, v, path)
 	}
 	v.PostVisitDisMaxQuery(dq)
 }
 
-func TraverseExistsQuery(eq *types.ExistsQuery, v QueryVisitor) {
+func (*QueryTraverser) TraverseExistsQuery(eq *types.ExistsQuery, v QueryVisitor, path []string) {
 	if eq == nil {
 		return
 	}
@@ -104,7 +132,7 @@ func TraverseExistsQuery(eq *types.ExistsQuery, v QueryVisitor) {
 	v.PostVisitExistsQuery(eq)
 }
 
-func TraverseMatchQuery(mq *types.MatchQuery, field string, v QueryVisitor) {
+func (*QueryTraverser) TraverseMatchQuery(mq *types.MatchQuery, field string, v QueryVisitor, path []string) {
 	if mq == nil {
 		return
 	}
@@ -112,7 +140,7 @@ func TraverseMatchQuery(mq *types.MatchQuery, field string, v QueryVisitor) {
 	v.PostVisitMatchQuery(mq, field)
 }
 
-func TraverseMatchAllQuery(mq *types.MatchAllQuery, v QueryVisitor) {
+func (qt *QueryTraverser) TraverseMatchAllQuery(mq *types.MatchAllQuery, v QueryVisitor, path []string) {
 	if mq == nil {
 		return
 	}
@@ -120,7 +148,7 @@ func TraverseMatchAllQuery(mq *types.MatchAllQuery, v QueryVisitor) {
 	v.PostVisitMatchAllQuery(mq)
 }
 
-func TraverseMatchBoolPrefixQuery(mbpq *types.MatchBoolPrefixQuery, field string, v QueryVisitor) {
+func (qt *QueryTraverser) TraverseMatchBoolPrefixQuery(mbpq *types.MatchBoolPrefixQuery, field string, v QueryVisitor, path []string) {
 	if mbpq == nil {
 		return
 	}
@@ -128,37 +156,48 @@ func TraverseMatchBoolPrefixQuery(mbpq *types.MatchBoolPrefixQuery, field string
 	v.PostVisitMatchBoolPrefixQuery(mbpq, field)
 }
 
-func TraverseQuery(q *types.Query, v QueryVisitor) {
+func (qt *QueryTraverser) TraverseQuery(q *types.Query, v QueryVisitor, path []string) {
 	if q == nil {
 		return
 	}
-	v.PreVisitQuery(q)
-
-	TraverseBooleanQuery(q.Bool, v)
-	for field, commonTermsQ := range q.Common {
-		TraverseCommonTermsQuery(&commonTermsQ, field, v)
+	if qt.Debug {
+		path = append(path, "query")
 	}
-	TraverseTypeQuery(q.Type, v)
-	TraverseBoostingQuery(q.Boosting, v)
-	TraverseDismaxQuery(q.DisMax, v)
-	TraverseCombinedFieldsQuery(q.CombinedFields, v)
-	TraverseConstantScoreQuery(q.ConstantScore, v)
+	v.PreVisitQuery(q)
+	if qt.Debug {
+		path = append(path, getJsonTagName(q, q.Bool))
+	}
+	qt.TraverseBooleanQuery(q.Bool, v, path)
+	if qt.Debug {
+		path = path[:len(path)-1]
+	}
+	for field, commonTermsQ := range q.Common {
+		qt.TraverseCommonTermsQuery(&commonTermsQ, field, v, path)
+	}
+	qt.TraverseTypeQuery(q.Type, v, path)
+	qt.TraverseBoostingQuery(q.Boosting, v, path)
+	qt.TraverseDismaxQuery(q.DisMax, v, path)
+	qt.TraverseCombinedFieldsQuery(q.CombinedFields, v, path)
+	qt.TraverseConstantScoreQuery(q.ConstantScore, v, path)
 
-	TraverseDistanceFeatureQuery(q.DistanceFeature, v)
+	qt.TraverseDistanceFeatureQuery(q.DistanceFeature, v, path)
 
-	TraverseExistsQuery(q.Exists, v)
+	qt.TraverseExistsQuery(q.Exists, v, path)
 
 	for field, matchQ := range q.Match {
-		TraverseMatchQuery(&matchQ, field, v)
+		qt.TraverseMatchQuery(&matchQ, field, v, path)
 	}
-	TraverseMatchAllQuery(q.MatchAll, v)
+	qt.TraverseMatchAllQuery(q.MatchAll, v, path)
 
 	for field, matchBoolPrefixQ := range q.MatchBoolPrefix {
-		TraverseMatchBoolPrefixQuery(&matchBoolPrefixQ, field, v)
+		qt.TraverseMatchBoolPrefixQuery(&matchBoolPrefixQ, field, v, path)
 	}
 	for field, termQ := range q.Term {
-		TraverseTermQuery(&termQ, field, v)
+		qt.TraverseTermQuery(&termQ, field, v, path)
 	}
 
 	v.PostVisitQuery(q)
+	if qt.Debug {
+		path = path[:len(path)-1]
+	}
 }

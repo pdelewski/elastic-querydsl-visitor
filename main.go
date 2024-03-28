@@ -159,12 +159,14 @@ func traverse() {
 
 	//TraverseQuery(query, &PrintVisitor{})
 	rewriter := NewSExpressionRewriter()
-	TraverseQuery(query, rewriter)
+	path := []string{}
+	queryTraverser := QueryTraverser{Debug: true}
+	queryTraverser.TraverseQuery(query, rewriter, path)
 	fmt.Print(rewriter.output)
 }
 
 func main() {
 	fmt.Println("uql driver")
-	//traverse()
-	printJsonMain()
+	traverse()
+	//printJsonMain()
 }
