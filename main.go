@@ -118,10 +118,10 @@ func matcher(path []string, matchPath []string) bool {
 }
 
 func printJSON(data map[string]interface{}, indent string, matchPath []string) {
-	fmt.Println(indent, "{")
+	fmt.Println(indent, " {")
 	currentPath := []string{}
 	printJSONHelper(data, indent+"    ", currentPath, matchPath, matcher)
-	fmt.Println(indent, "}")
+	fmt.Println(indent, " }")
 }
 
 func printJsonMain() {
@@ -163,9 +163,8 @@ func traverse() {
 		fmt.Println("Error:", err)
 		return
 	}
-	//result := new(string)
-	rewriter.exprStack[0].Dump(indentation, data)
-	//fmt.Println(*result)
+
+	rewriter.exprStack[0].DumpPrefix(data)
 }
 
 func main() {

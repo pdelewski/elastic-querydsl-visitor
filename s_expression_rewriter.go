@@ -17,17 +17,34 @@ func isOperator(op string) bool {
 	return op == "and" || op == "or"
 }
 
+func convertTerms(input string) []string {
+	tokens := strings.Fields(input)
+	stack := []string{}
+	for i := 0; i < len(tokens); i++ {
+		token := tokens[i]
+		if token == "=" {
+			operand1 := stack[len(stack)-1]
+			operand2 := tokens[i+1]
+			stack = stack[:len(stack)-1]
+			stack = append(stack, fmt.Sprintf("(%s = %s)", operand1, operand2))
+			i++
+		} else {
+			stack = append(stack, token)
+		}
+	}
+	return stack
+}
+
 func prefixToInfix(prefix string) string {
 	stack := []string{}
-	tokens := strings.Fields(prefix)
+	tokens := convertTerms(prefix)
 	for i := len(tokens) - 1; i >= 0; i-- {
 		token := tokens[i]
 		if isOperator(token) {
 			operand1 := stack[len(stack)-1]
 			operand2 := stack[len(stack)-2]
-			operand3 := stack[len(stack)-3]
-			stack = stack[:len(stack)-3]
-			stack = append(stack, fmt.Sprintf("(%s %s %s)", operand1, operand2, operand3))
+			stack = stack[:len(stack)-2]
+			stack = append(stack, fmt.Sprintf("(%s %s %s)", operand1, token, operand2))
 
 		} else {
 			stack = append(stack, token)
@@ -54,16 +71,22 @@ func (s *Expression) Dump(indentation int, data map[string]interface{}) {
 	}
 }
 
-func (s *Expression) DumpPrefix(data map[string]interface{}, result *string) {
-	*result += s.value + " "
+func (s *Expression) DumpPrefixHelper(data map[string]interface{}, result *string) {
+	*result += " " + s.value
 	for _, child := range s.children {
-		child.DumpPrefix(data, result)
+		child.DumpPrefixHelper(data, result)
 	}
 }
 
-func (s *Expression) EmitSql(indentation int, data map[string]interface{}) {
-	fmt.Println("SELECT * FROM table WHERE")
-
+func (s *Expression) DumpPrefix(data map[string]interface{}) {
+	result := new(string)
+	s.DumpPrefixHelper(data, result)
+	prefixNotation := prefixToInfix(*result)
+	fmt.Println(Blue + " WHERE " + prefixNotation + Reset)
+	printJSON(data, "", s.path)
+	for _, child := range s.children {
+		child.DumpPrefix(data)
+	}
 }
 
 type SExpressionRewriter struct {
