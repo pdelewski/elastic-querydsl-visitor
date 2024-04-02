@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
+	"strings"
 )
 
 type Expression struct {
@@ -12,16 +13,57 @@ type Expression struct {
 	path     []string
 }
 
-func (s *Expression) Dump(indentation int, data map[string]interface{}) {
+func isOperator(op string) bool {
+	return op == "and" || op == "or"
+}
+
+func prefixToInfix(prefix string) string {
+	stack := []string{}
+	tokens := strings.Fields(prefix)
+	for i := len(tokens) - 1; i >= 0; i-- {
+		token := tokens[i]
+		if isOperator(token) {
+			operand1 := stack[len(stack)-1]
+			operand2 := stack[len(stack)-2]
+			operand3 := stack[len(stack)-3]
+			stack = stack[:len(stack)-3]
+			stack = append(stack, fmt.Sprintf("(%s %s %s)", operand1, operand2, operand3))
+
+		} else {
+			stack = append(stack, token)
+		}
+	}
+	return stack[0]
+}
+func (s *Expression) DumpHelper(indentation int, data map[string]interface{}) {
 	for i := 0; i < indentation; i++ {
 		fmt.Print("  ")
 	}
-	fmt.Println(s.value)
+	fmt.Println(Blue + s.value + Reset)
+	for _, child := range s.children {
+		child.DumpHelper(indentation+1, data)
+	}
+}
+
+func (s *Expression) Dump(indentation int, data map[string]interface{}) {
+	s.DumpHelper(indentation, data)
 	s.path = append(s.path, "*")
 	printJSON(data, "", s.path)
 	for _, child := range s.children {
 		child.Dump(indentation+1, data)
 	}
+}
+
+func (s *Expression) DumpPrefix(data map[string]interface{}, result *string) {
+	*result += s.value + " "
+	for _, child := range s.children {
+		child.DumpPrefix(data, result)
+	}
+}
+
+func (s *Expression) EmitSql(indentation int, data map[string]interface{}) {
+	fmt.Println("SELECT * FROM table WHERE")
+
 }
 
 type SExpressionRewriter struct {

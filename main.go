@@ -154,6 +154,7 @@ func traverse() {
 	queryTraverser := QueryTraverser{Debug: true, PathMatched: false}
 	queryTraverser.TraverseQuery(query, rewriter, path)
 	indentation := 0
+	_ = indentation
 	jsonData := queryContent
 
 	var data map[string]interface{}
@@ -162,7 +163,9 @@ func traverse() {
 		fmt.Println("Error:", err)
 		return
 	}
+	//result := new(string)
 	rewriter.exprStack[0].Dump(indentation, data)
+	//fmt.Println(*result)
 }
 
 func main() {
