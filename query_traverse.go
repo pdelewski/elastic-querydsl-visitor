@@ -92,12 +92,12 @@ func (qt *QueryTraverser) TraverseTermQuery(t *types.TermQuery, field string, v 
 		return
 	}
 	if qt.Debug {
-		path = append(path, "term")
+		path = append(path, "term", field)
 	}
 	v.PreVisitTerm(t, field, path)
 	v.PostVisitTerm(t, field, path)
 	if qt.Debug {
-		path = path[:len(path)-1]
+		path = path[:len(path)-2]
 	}
 }
 

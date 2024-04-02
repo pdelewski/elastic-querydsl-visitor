@@ -16,8 +16,7 @@ func (s *Expression) Dump(indentation int, data map[string]interface{}) {
 	for i := 0; i < indentation; i++ {
 		fmt.Print("  ")
 	}
-	fmt.Print(s.value)
-	fmt.Println(" ", s.path)
+	fmt.Println(s.value)
 	s.path = append(s.path, "*")
 	printJSON(data, "", s.path)
 	for _, child := range s.children {

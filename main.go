@@ -27,7 +27,7 @@ const queryContent = `{
           "bool": {
             "should": [
               { "term": { "field2": "value2" }},
-              { "term": { "field2": "value3" }}
+              { "term": { "field3": "value3" }}
             ]
           }
         }
