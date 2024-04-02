@@ -41,22 +41,22 @@ func printColoredTextWithBackground(text, textColor, backgroundColor string) {
 	fmt.Printf("\033[K%s%s%s%s%s\n", backgroundColor, textColor, text, Reset, Reset)
 }
 
-func printJSONHelper(data map[string]interface{}, indent string, currentPath []string, matcher func([]string) bool) {
+func printJSONHelper(data map[string]interface{}, indent string, currentPath []string, matchPath []string, matcher func([]string, []string) bool) {
 	for key, value := range data {
 		switch v := value.(type) {
 		case map[string]interface{}:
 			currentPath = append(currentPath, key)
-			if matcher(currentPath) {
+			if matcher(currentPath, matchPath) {
 				fmt.Println(Red+indent, key, ": {"+Reset)
 			} else {
 				fmt.Println(indent, key, ": {")
 			}
-			printJSONHelper(v, indent+"    ", currentPath, matcher)
+			printJSONHelper(v, indent+"    ", currentPath, matchPath, matcher)
 			currentPath = currentPath[:len(currentPath)-1]
 			fmt.Println(indent, " }")
 		case []interface{}:
 			currentPath = append(currentPath, key)
-			if matcher(currentPath) {
+			if matcher(currentPath, matchPath) {
 				fmt.Println(Red+indent, key, ": ["+Reset)
 			} else {
 				fmt.Println(indent, key, ": [")
@@ -68,7 +68,7 @@ func printJSONHelper(data map[string]interface{}, indent string, currentPath []s
 					fmt.Println(indent + "    " + " {")
 					currentPath = append(currentPath, key)
 					currentPath = append(currentPath, strconv.Itoa(i))
-					printJSONHelper(nested, indent+"        ", currentPath, matcher)
+					printJSONHelper(nested, indent+"        ", currentPath, matchPath, matcher)
 					currentPath = currentPath[:len(currentPath)-1]
 					currentPath = currentPath[:len(currentPath)-1]
 					fmt.Println(indent + "    " + " },")
@@ -79,7 +79,7 @@ func printJSONHelper(data map[string]interface{}, indent string, currentPath []s
 			fmt.Println(indent, " ]")
 		default:
 			currentPath = append(currentPath, key)
-			if matcher(currentPath) {
+			if matcher(currentPath, matchPath) {
 				fmt.Println(Red+indent, key, ":", value, Reset)
 			} else {
 				fmt.Println(indent, key, ":", value)
@@ -110,17 +110,17 @@ func isSubSlice(slice1, slice2 []string) bool {
 	return true
 }
 
-func matcher(path []string) bool {
-	if isSubSlice(path, []string{"query", "bool", "must", "*", "term"}) {
+func matcher(path []string, matchPath []string) bool {
+	if isSubSlice(path, matchPath) {
 		return true
 	}
 	return false
 }
 
-func printJSON(data map[string]interface{}, indent string) {
+func printJSON(data map[string]interface{}, indent string, matchPath []string) {
 	fmt.Println(indent, "{")
 	currentPath := []string{}
-	printJSONHelper(data, indent+"    ", currentPath, matcher)
+	printJSONHelper(data, indent+"    ", currentPath, matchPath, matcher)
 	fmt.Println(indent, "}")
 }
 
@@ -135,8 +135,9 @@ func printJsonMain() {
 	}
 
 	fmt.Println("JSON Content:")
+	matchPath := []string{"query", "bool", "must", "*", "term"}
 
-	printJSON(data, "")
+	printJSON(data, "", matchPath)
 }
 
 func traverse() {
@@ -148,16 +149,23 @@ func traverse() {
 		fmt.Println(err)
 	}
 
-	//TraverseQuery(query, &PrintVisitor{})
 	rewriter := NewSExpressionRewriter()
 	path := []string{}
-	queryTraverser := QueryTraverser{Debug: true}
+	queryTraverser := QueryTraverser{Debug: true, PathMatched: false}
 	queryTraverser.TraverseQuery(query, rewriter, path)
-	fmt.Print(rewriter.output)
+	indentation := 0
+	jsonData := queryContent
+
+	var data map[string]interface{}
+	err = json.Unmarshal([]byte(jsonData), &data)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	rewriter.exprStack[0].Dump(indentation, data)
 }
 
 func main() {
 	fmt.Println("uql driver")
 	traverse()
-	//printJsonMain()
 }

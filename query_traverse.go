@@ -5,110 +5,117 @@ import (
 )
 
 type QueryTraverser struct {
-	Debug bool
+	Debug       bool
+	PathMatched bool
 }
 
 func (qt *QueryTraverser) TraverseBooleanQuery(b *types.BoolQuery, v QueryVisitor, path []string) {
 	if b == nil {
 		return
 	}
-	v.PreVisitBool(b)
+	v.PreVisitBool(b, path)
 	for _, q := range b.Filter {
 		if qt.Debug {
-			path = append(path, getJsonTagName(&q, q.Bool))
+			path = append(path, "filter", "*")
 		}
 		qt.TraverseQuery(&q, v, path)
 		if qt.Debug {
-			path = path[:len(path)-1]
+			path = path[:len(path)-2]
 		}
 	}
 	for _, q := range b.Should {
 		if qt.Debug {
-			path = append(path, getJsonTagName(&q, q.Bool))
+			path = append(path, "should", "*")
 		}
 		qt.TraverseQuery(&q, v, path)
 		if qt.Debug {
-			path = path[:len(path)-1]
+			path = path[:len(path)-2]
 		}
 	}
 	for _, q := range b.Must {
 		if qt.Debug {
-			path = append(path, getJsonTagName(&q, q.Bool))
+			path = append(path, "must", "*")
 		}
 		qt.TraverseQuery(&q, v, path)
 		if qt.Debug {
-			path = path[:len(path)-1]
+			path = path[:len(path)-2]
 		}
 	}
 	for _, q := range b.MustNot {
 		if qt.Debug {
-			path = append(path, getJsonTagName(&q, q.Bool))
+			path = append(path, "must_not", "*")
 		}
 		qt.TraverseQuery(&q, v, path)
 		if qt.Debug {
-			path = path[:len(path)-1]
+			path = path[:len(path)-2]
 		}
 	}
-	v.PostVisitBool(b)
+	v.PostVisitBool(b, path)
 }
 
 func (qt *QueryTraverser) TraverseCombinedFieldsQuery(cfq *types.CombinedFieldsQuery, v QueryVisitor, path []string) {
 	if cfq == nil {
 		return
 	}
-	v.PreVisitCombinedFieldsQuery(cfq)
-	v.PostVisitCombinedFieldsQuery(cfq)
+	v.PreVisitCombinedFieldsQuery(cfq, path)
+	v.PostVisitCombinedFieldsQuery(cfq, path)
 }
 
 func (qt *QueryTraverser) TraverseTypeQuery(t *types.TypeQuery, v QueryVisitor, path []string) {
 	if t == nil {
 		return
 	}
-	v.PreVisitTypeQuery(t)
-	v.PostVisitTypeQuery(t)
+	v.PreVisitTypeQuery(t, path)
+	v.PostVisitTypeQuery(t, path)
 }
 
 func (qt *QueryTraverser) TraverseBoostingQuery(b *types.BoostingQuery, v QueryVisitor, path []string) {
 	if b == nil {
 		return
 	}
-	v.PreVisitBoostingQuery(b)
+	v.PreVisitBoostingQuery(b, path)
 	qt.TraverseQuery(b.Positive, v, path)
 	qt.TraverseQuery(b.Negative, v, path)
-	v.PostVisitBoostingQuery(b)
+	v.PostVisitBoostingQuery(b, path)
 }
 
 func (qt *QueryTraverser) TraverseCommonTermsQuery(ctq *types.CommonTermsQuery, field string, v QueryVisitor, path []string) {
 	if ctq == nil {
 		return
 	}
-	v.PreVisitCommonTermsQuery(ctq, field)
-	v.PostVisitCommonTermsQuery(ctq, field)
+	v.PreVisitCommonTermsQuery(ctq, field, path)
+	v.PostVisitCommonTermsQuery(ctq, field, path)
 }
 
 func (qt *QueryTraverser) TraverseTermQuery(t *types.TermQuery, field string, v QueryVisitor, path []string) {
 	if t == nil {
 		return
 	}
-	v.PreVisitTerm(t, field)
-	v.PostVisitTerm(t, field)
+	if qt.Debug {
+		path = append(path, "term")
+	}
+	v.PreVisitTerm(t, field, path)
+	v.PostVisitTerm(t, field, path)
+	if qt.Debug {
+		path = path[:len(path)-1]
+	}
 }
 
 func (qt *QueryTraverser) TraverseConstantScoreQuery(csq *types.ConstantScoreQuery, v QueryVisitor, path []string) {
 	if csq == nil {
 		return
 	}
-	v.PreVisitConstantScoreQuery(csq)
+	v.PreVisitConstantScoreQuery(csq, path)
 	qt.TraverseQuery(csq.Filter, v, path)
-	v.PostVisitConstantScoreQuery(csq)
+	v.PostVisitConstantScoreQuery(csq, path)
 }
 
 func (qt *QueryTraverser) TraverseDistanceFeatureQuery(dfq types.DistanceFeatureQuery, v QueryVisitor, path []string) {
 	if dfq == nil {
 		return
 	}
-	v.PreVisitDistanceFeatureQuery(dfq)
-	v.PostVisitDistanceFeatureQuery(dfq)
+	v.PreVisitDistanceFeatureQuery(dfq, path)
+	v.PostVisitDistanceFeatureQuery(dfq, path)
 
 }
 
@@ -116,11 +123,11 @@ func (qt *QueryTraverser) TraverseDismaxQuery(dq *types.DisMaxQuery, v QueryVisi
 	if dq == nil {
 		return
 	}
-	v.PreVisitDisMaxQuery(dq)
+	v.PreVisitDisMaxQuery(dq, path)
 	for _, q := range dq.Queries {
 		qt.TraverseQuery(&q, v, path)
 	}
-	v.PostVisitDisMaxQuery(dq)
+	v.PostVisitDisMaxQuery(dq, path)
 }
 
 func (*QueryTraverser) TraverseExistsQuery(eq *types.ExistsQuery, v QueryVisitor, path []string) {
@@ -128,44 +135,45 @@ func (*QueryTraverser) TraverseExistsQuery(eq *types.ExistsQuery, v QueryVisitor
 		return
 	}
 
-	v.PreVisitExistsQuery(eq)
-	v.PostVisitExistsQuery(eq)
+	v.PreVisitExistsQuery(eq, path)
+	v.PostVisitExistsQuery(eq, path)
 }
 
 func (*QueryTraverser) TraverseMatchQuery(mq *types.MatchQuery, field string, v QueryVisitor, path []string) {
 	if mq == nil {
 		return
 	}
-	v.PreVisitMatchQuery(mq, field)
-	v.PostVisitMatchQuery(mq, field)
+	v.PreVisitMatchQuery(mq, field, path)
+	v.PostVisitMatchQuery(mq, field, path)
 }
 
 func (qt *QueryTraverser) TraverseMatchAllQuery(mq *types.MatchAllQuery, v QueryVisitor, path []string) {
 	if mq == nil {
 		return
 	}
-	v.PreVisitMatchAllQuery(mq)
-	v.PostVisitMatchAllQuery(mq)
+	v.PreVisitMatchAllQuery(mq, path)
+	v.PostVisitMatchAllQuery(mq, path)
 }
 
 func (qt *QueryTraverser) TraverseMatchBoolPrefixQuery(mbpq *types.MatchBoolPrefixQuery, field string, v QueryVisitor, path []string) {
 	if mbpq == nil {
 		return
 	}
-	v.PreVisitMatchBoolPrefixQuery(mbpq, field)
-	v.PostVisitMatchBoolPrefixQuery(mbpq, field)
+	v.PreVisitMatchBoolPrefixQuery(mbpq, field, path)
+	v.PostVisitMatchBoolPrefixQuery(mbpq, field, path)
 }
 
 func (qt *QueryTraverser) TraverseQuery(q *types.Query, v QueryVisitor, path []string) {
 	if q == nil {
 		return
 	}
-	if qt.Debug {
+	if qt.Debug && !qt.PathMatched {
 		path = append(path, "query")
+		qt.PathMatched = true
 	}
-	v.PreVisitQuery(q)
+	v.PreVisitQuery(q, path)
 	if qt.Debug {
-		path = append(path, getJsonTagName(q, q.Bool))
+		path = append(path, "bool")
 	}
 	qt.TraverseBooleanQuery(q.Bool, v, path)
 	if qt.Debug {
@@ -196,7 +204,7 @@ func (qt *QueryTraverser) TraverseQuery(q *types.Query, v QueryVisitor, path []s
 		qt.TraverseTermQuery(&termQ, field, v, path)
 	}
 
-	v.PostVisitQuery(q)
+	v.PostVisitQuery(q, path)
 	if qt.Debug {
 		path = path[:len(path)-1]
 	}

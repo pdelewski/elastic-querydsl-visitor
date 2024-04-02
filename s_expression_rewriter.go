@@ -1,68 +1,95 @@
 package main
 
 import (
+	"fmt"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 )
 
+type Expression struct {
+	value    string
+	children []*Expression
+	eType    string
+	path     []string
+}
+
+func (s *Expression) Dump(indentation int, data map[string]interface{}) {
+	for i := 0; i < indentation; i++ {
+		fmt.Print("  ")
+	}
+	fmt.Print(s.value)
+	fmt.Println(" ", s.path)
+	s.path = append(s.path, "*")
+	printJSON(data, "", s.path)
+	for _, child := range s.children {
+		child.Dump(indentation+1, data)
+	}
+}
+
 type SExpressionRewriter struct {
-	intendation int
-	output      string
+	exprStack []*Expression
 }
 
 func NewSExpressionRewriter() *SExpressionRewriter {
-	return &SExpressionRewriter{intendation: 0}
+	return &SExpressionRewriter{}
 }
 
-func (r *SExpressionRewriter) PreVisitBool(b *types.BoolQuery) {
+func (r *SExpressionRewriter) PreVisitBool(b *types.BoolQuery, path []string) {
+	boolExpr := &Expression{}
 	if len(b.Must) > 0 {
-		for i := 0; i < r.intendation; i++ {
-			r.output += "  "
-		}
-		r.output += "add\n"
-		r.intendation++
+		boolExpr.value += "and"
 	}
 	if len(b.Should) > 0 {
-		for i := 0; i < r.intendation; i++ {
-			r.output += "  "
+		boolExpr.value += "or"
+	}
+	boolExpr.eType = "bool"
+	r.exprStack = append(r.exprStack, boolExpr)
+	boolExpr.path = path
+}
+func (r *SExpressionRewriter) PreVisitTerm(t *types.TermQuery, field string, path []string) {
+	termExpr := &Expression{}
+	termExpr.value = field + " = " + t.Value.(string)
+	termExpr.eType = "term"
+	r.exprStack = append(r.exprStack, termExpr)
+	termExpr.path = path
+}
+func (r *SExpressionRewriter) PostVisitTerm(*types.TermQuery, string, []string) {}
+func (r *SExpressionRewriter) PreVisitQuery(*types.Query, []string)             {}
+func (r *SExpressionRewriter) PostVisitQuery(*types.Query, []string)            {}
+func (r *SExpressionRewriter) PostVisitBool(*types.BoolQuery, []string) {
+	children := []*Expression{}
+	i := len(r.exprStack) - 1
+	for ; i >= 0; i-- {
+		expr := r.exprStack[i]
+		if expr.eType == "bool" && i != len(r.exprStack)-1 {
+			break
 		}
-		r.output += "or\n"
-		r.intendation++
+		children = append(children, expr)
 	}
+	r.exprStack[i].children = children
+	r.exprStack = r.exprStack[:i+1]
 }
-func (r *SExpressionRewriter) PreVisitTerm(t *types.TermQuery, field string) {
-	for i := 0; i < r.intendation; i++ {
-		r.output += "  "
-	}
+func (r *SExpressionRewriter) PreVisitBoostingQuery(*types.BoostingQuery, []string)                {}
+func (r *SExpressionRewriter) PostVisitBoostingQuery(*types.BoostingQuery, []string)               {}
+func (r *SExpressionRewriter) PreVisitTypeQuery(*types.TypeQuery, []string)                        {}
+func (r *SExpressionRewriter) PostVisitTypeQuery(*types.TypeQuery, []string)                       {}
+func (r *SExpressionRewriter) PreVisitCommonTermsQuery(*types.CommonTermsQuery, string, []string)  {}
+func (r *SExpressionRewriter) PostVisitCommonTermsQuery(*types.CommonTermsQuery, string, []string) {}
+func (r *SExpressionRewriter) PreVisitCombinedFieldsQuery(*types.CombinedFieldsQuery, []string)    {}
+func (r *SExpressionRewriter) PostVisitCombinedFieldsQuery(*types.CombinedFieldsQuery, []string)   {}
 
-	r.output += field + " = " + t.Value.(string)
-	r.output += "\n"
+func (r *SExpressionRewriter) PreVisitConstantScoreQuery(*types.ConstantScoreQuery, []string)     {}
+func (r *SExpressionRewriter) PostVisitConstantScoreQuery(*types.ConstantScoreQuery, []string)    {}
+func (r *SExpressionRewriter) PreVisitDisMaxQuery(*types.DisMaxQuery, []string)                   {}
+func (r *SExpressionRewriter) PostVisitDisMaxQuery(*types.DisMaxQuery, []string)                  {}
+func (r *SExpressionRewriter) PreVisitDistanceFeatureQuery(types.DistanceFeatureQuery, []string)  {}
+func (r *SExpressionRewriter) PostVisitDistanceFeatureQuery(types.DistanceFeatureQuery, []string) {}
+func (r *SExpressionRewriter) PreVisitExistsQuery(*types.ExistsQuery, []string)                   {}
+func (r *SExpressionRewriter) PostVisitExistsQuery(*types.ExistsQuery, []string)                  {}
+func (r *SExpressionRewriter) PreVisitMatchQuery(*types.MatchQuery, string, []string)             {}
+func (r *SExpressionRewriter) PostVisitMatchQuery(*types.MatchQuery, string, []string)            {}
+func (r *SExpressionRewriter) PreVisitMatchAllQuery(*types.MatchAllQuery, []string)               {}
+func (r *SExpressionRewriter) PostVisitMatchAllQuery(*types.MatchAllQuery, []string)              {}
+func (r *SExpressionRewriter) PreVisitMatchBoolPrefixQuery(*types.MatchBoolPrefixQuery, string, []string) {
 }
-
-func (r *SExpressionRewriter) PreVisitQuery(*types.Query)                                          {}
-func (r *SExpressionRewriter) PostVisitQuery(q *types.Query)                                       {}
-func (r *SExpressionRewriter) PostVisitBool(b *types.BoolQuery)                                    {}
-func (r *SExpressionRewriter) PreVisitBoostingQuery(b *types.BoostingQuery)                        {}
-func (r *SExpressionRewriter) PostVisitBoostingQuery(b *types.BoostingQuery)                       {}
-func (r *SExpressionRewriter) PreVisitTypeQuery(t *types.TypeQuery)                                {}
-func (r *SExpressionRewriter) PostVisitTypeQuery(t *types.TypeQuery)                               {}
-func (r *SExpressionRewriter) PreVisitCommonTermsQuery(ctq *types.CommonTermsQuery, field string)  {}
-func (r *SExpressionRewriter) PostVisitCommonTermsQuery(ctq *types.CommonTermsQuery, field string) {}
-func (r *SExpressionRewriter) PreVisitCombinedFieldsQuery(ctq *types.CombinedFieldsQuery)          {}
-func (r *SExpressionRewriter) PostVisitCombinedFieldsQuery(ctq *types.CombinedFieldsQuery)         {}
-func (r *SExpressionRewriter) PostVisitTerm(t *types.TermQuery, field string)                      {}
-func (r *SExpressionRewriter) PreVisitConstantScoreQuery(csq *types.ConstantScoreQuery)            {}
-func (r *SExpressionRewriter) PostVisitConstantScoreQuery(csq *types.ConstantScoreQuery)           {}
-func (r *SExpressionRewriter) PreVisitDisMaxQuery(dmq *types.DisMaxQuery)                          {}
-func (r *SExpressionRewriter) PostVisitDisMaxQuery(dmq *types.DisMaxQuery)                         {}
-func (r *SExpressionRewriter) PreVisitDistanceFeatureQuery(dfq types.DistanceFeatureQuery)         {}
-func (r *SExpressionRewriter) PostVisitDistanceFeatureQuery(dfq types.DistanceFeatureQuery)        {}
-func (r *SExpressionRewriter) PreVisitExistsQuery(eq *types.ExistsQuery)                           {}
-func (r *SExpressionRewriter) PostVisitExistsQuery(eq *types.ExistsQuery)                          {}
-func (r *SExpressionRewriter) PreVisitMatchQuery(mq *types.MatchQuery, field string)               {}
-func (r *SExpressionRewriter) PostVisitMatchQuery(mq *types.MatchQuery, field string)              {}
-func (r *SExpressionRewriter) PreVisitMatchAllQuery(mq *types.MatchAllQuery)                       {}
-func (r *SExpressionRewriter) PostVisitMatchAllQuery(mq *types.MatchAllQuery)                      {}
-func (r *SExpressionRewriter) PreVisitMatchBoolPrefixQuery(mq *types.MatchBoolPrefixQuery, field string) {
-}
-func (r *SExpressionRewriter) PostVisitMatchBoolPrefixQuery(mq *types.MatchBoolPrefixQuery, field string) {
+func (r *SExpressionRewriter) PostVisitMatchBoolPrefixQuery(*types.MatchBoolPrefixQuery, string, []string) {
 }
