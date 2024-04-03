@@ -6,7 +6,18 @@ import (
 	"strconv"
 )
 
-func printJSONHelper(data map[string]interface{}, indent string, currentPath []string, matchPath []string, matcher func([]string, []string) bool) {
+// PrintJSON prints the JSON data with the given match path highlighted in red
+// parameters:
+// data: the JSON data to print
+// currentPath: the current path in the JSON data
+// indent: the initial indentation
+// matchPath: the path to highlight
+// returns: void
+func printJSONHelper(data map[string]interface{},
+	indent string,
+	currentPath []string,
+	matchPath []string,
+	matcher func([]string, []string) bool) {
 	for key, value := range data {
 		switch v := value.(type) {
 		case map[string]interface{}:
