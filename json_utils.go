@@ -31,11 +31,9 @@ func printJSONHelper(data map[string]interface{}, indent string, currentPath []s
 			for i, item := range v {
 				if nested, ok := item.(map[string]interface{}); ok {
 					fmt.Println(indent + "    " + " {")
-					currentPath = append(currentPath, key)
-					currentPath = append(currentPath, strconv.Itoa(i))
+					currentPath = append(currentPath, key, strconv.Itoa(i))
 					printJSONHelper(nested, indent+"        ", currentPath, matchPath, matcher)
-					currentPath = currentPath[:len(currentPath)-1]
-					currentPath = currentPath[:len(currentPath)-1]
+					currentPath = currentPath[:len(currentPath)-2]
 					fmt.Println(indent + "    " + " },")
 				} else {
 					fmt.Println(indent+"    ", item)
