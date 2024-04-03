@@ -37,12 +37,9 @@ func traverse() {
 	path := []string{}
 	queryTraverser := QueryTraverser{Debug: true, PathMatched: false}
 	queryTraverser.TraverseQuery(query, rewriter, path)
-	indentation := 0
-	_ = indentation
-	jsonData := queryContent
 
 	var data map[string]interface{}
-	err = json.Unmarshal([]byte(jsonData), &data)
+	err = json.Unmarshal([]byte(queryContent), &data)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
