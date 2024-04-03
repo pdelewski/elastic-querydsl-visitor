@@ -22,17 +22,23 @@ func printJSONHelper(data map[string]interface{},
 		switch v := value.(type) {
 		case map[string]interface{}:
 			currentPath = append(currentPath, key)
-			if matcher(currentPath, matchPath) {
+			matched := matcher(currentPath, matchPath)
+			if matched {
 				fmt.Println(Red+indent, key, ": {"+Reset)
 			} else {
 				fmt.Println(indent, key, ": {")
 			}
 			printJSONHelper(v, indent+"    ", currentPath, matchPath, matcher)
 			currentPath = currentPath[:len(currentPath)-1]
-			fmt.Println(indent, " }")
+			if matched {
+				fmt.Println(Red+indent, " }"+Reset)
+			} else {
+				fmt.Println(indent, "}")
+			}
 		case []interface{}:
 			currentPath = append(currentPath, key)
-			if matcher(currentPath, matchPath) {
+			matched := matcher(currentPath, matchPath)
+			if matched {
 				fmt.Println(Red+indent, key, ": ["+Reset)
 			} else {
 				fmt.Println(indent, key, ": [")
@@ -50,7 +56,11 @@ func printJSONHelper(data map[string]interface{},
 					fmt.Println(indent+"    ", item)
 				}
 			}
-			fmt.Println(indent, " ]")
+			if matched {
+				fmt.Println(Red+indent, " ]"+Reset)
+			} else {
+				fmt.Println(indent, " ]")
+			}
 		default:
 			currentPath = append(currentPath, key)
 			if matcher(currentPath, matchPath) {
