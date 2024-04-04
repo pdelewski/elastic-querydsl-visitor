@@ -44,8 +44,8 @@ func traverse() {
 		fmt.Println("Error:", err)
 		return
 	}
-
-	rewriter.exprStack[0].DumpPrefix(data)
+	expression := rewriter.exprStack[0]
+	expression.DumpPrefix(data)
 }
 
 func main() {
